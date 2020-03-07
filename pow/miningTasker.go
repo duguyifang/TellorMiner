@@ -67,12 +67,14 @@ func (mt *MiningTasker) GetWork() *Work {
 
 	mt.log.Debug("Received data: %v", m)
 
-	if stat := mt.checkDispute(m[dispKey]); stat == statusWaitNext {
-		return nil
-	}
+	// if stat := mt.checkDispute(m[dispKey]); stat == statusWaitNext {
+	// 	mt.log.Info("====> mt.checkDispute(m[dispKey])")
+	// 	return nil
+	// }
 
 	diff, stat := mt.getInt(m[db.DifficultyKey])
 	if stat == statusWaitNext || stat == statusFailure {
+		mt.log.Info("====> mt.getInt(m[db.DifficultyKey]")
 		return nil
 	}
 
@@ -90,7 +92,7 @@ func (mt *MiningTasker) GetWork() *Work {
 	val := m2[valKey]
 	if val == nil || len(val) == 0 {
 		mt.log.Info("Pricing data not available for request %d, cannot mine yet", reqID.Uint64())
-		return nil
+		// return nil
 	}
 
 	newChallenge := &MiningChallenge{
@@ -102,6 +104,7 @@ func (mt *MiningTasker) GetWork() *Work {
 	//if we already sent this challenge out, don't do it again
 	if mt.currChallenge != nil {
 		if bytes.Compare(newChallenge.Challenge, mt.currChallenge.Challenge) == 0 {
+			mt.log.Info("if we already sent this challenge out, don't do it again")
 			return nil
 		}
 	}
