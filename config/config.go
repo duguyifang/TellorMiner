@@ -38,17 +38,20 @@ func (d *Duration) UnmarshalJSON(b []byte) error {
 }
 
 
-type GPUConfig struct {
-	//number of threads in a workgroup
-	GroupSize int `json:"groupSize"`
-	//total number of threads
-	Groups int`json:"groups"`
-	//number of iterations within a thread
-	Count uint32 `json:"count"`
-
-	Disabled bool `json:"disabled"`
+type Kafka struct {
+	Brokers          string   `json:"brokers"`
+	SolvedShareTopic string   `json:"solvedShareTopic"`
+	JobTopic         string   `json:"jobTopic"`
 }
 
+type MysqlConnectionInfo struct {
+	Host       string     `json:"mysqlHost"`
+	Port       string     `json:"mysqlPort"`
+	Username   string     `json:"mysqlUserName"`
+	Password   string     `json:"mysqlPassWord"`
+	Dbname     string     `json:"mysqlDbName"`
+	Table      string     `json:"tableName"`
+}
 
 //Config holds global config info derived from config.json
 type Config struct {
@@ -73,13 +76,15 @@ type Config struct {
 	NumProcessors                int                   `json:"numProcessors"`
 	Heartbeat                    Duration              `json:"heartbeat"`
 	ServerWhitelist              []string              `json:"serverWhitelist"`
-	GPUConfig                    map[string]*GPUConfig `json:"gpuConfig"`
+	Kafka                        Kafka                 `json:"kafka"`
+	MysqlConnectionInfo          MysqlConnectionInfo   `json:"mysqlConnectionInfo"`
 	EnablePoolWorker             bool                  `json:"enablePoolWorker"`
 	PoolURL                      string                `json:"poolURL"`
 	PoolJobDuration              Duration 			   `json:"poolJobDuration"`
 	PSRFolder                    string                `json:"psrFolder"`
 	DisputeTimeDelta			 Duration			   `json:"disputeTimeDelta"` //ignore data further than this away from the value we are checking
 	DisputeThreshold			 float64			   `json:"disputeThreshold"` //maximum allowed relative difference between observed and submitted value
+
 }
 
 const defaultTimeout = 30 * time.Second //30 second fetch timeout
@@ -185,21 +190,6 @@ func validateConfig(cfg *Config) error {
 
 	if cfg.GasMultiplier < 0 || cfg.GasMultiplier > 20 {
 		return fmt.Errorf("gas multiplier out of range [0, 20] %f", cfg.GasMultiplier)
-	}
-
-	for name,gpuConfig := range cfg.GPUConfig {
-		if gpuConfig.Disabled {
-			continue
-		}
-		if gpuConfig.Count == 0 {
-			return fmt.Errorf("gpu '%s' requires 'count' > 0", name)
-		}
-		if gpuConfig.GroupSize == 0 {
-			return fmt.Errorf("gpu '%s' requires 'groupSize' > 0", name)
-		}
-		if gpuConfig.Groups == 0 {
-			return fmt.Errorf("gpu '%s' requires 'groups' > 0", name)
-		}
 	}
 
 	return nil
