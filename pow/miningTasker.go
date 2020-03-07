@@ -69,11 +69,13 @@ func (mt *MiningTasker) GetWork() *Work {
 	mt.log.Debug("Received data: %v", m)
 
 	if stat := mt.checkDispute(m[dispKey]); stat == statusWaitNext {
+		mt.log.Info("====> mt.checkDispute(m[dispKey]) : statusWaitNext")
 		return nil
 	}
 
 	diff, stat := mt.getInt(m[db.DifficultyKey])
 	if stat == statusWaitNext || stat == statusFailure {
+		mt.log.Info("====> stat == statusWaitNext || stat == statusFailure")
 		return nil
 	}
 
@@ -108,6 +110,7 @@ func (mt *MiningTasker) GetWork() *Work {
 	//if we already sent this challenge out, don't do it again
 	if mt.currChallenge != nil {
 		if bytes.Compare(newChallenge.Challenge, mt.currChallenge.Challenge) == 0 {
+			mt.log.Info("if we already sent this challenge out, don't do it again")
 			return nil
 		}
 	}
