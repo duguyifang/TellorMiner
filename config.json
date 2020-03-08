@@ -13,6 +13,14 @@
     "gasMultiplier": 1,
     "gasMax":10,
     "useGPU":false,
+    "mysqlConnectionInfo" : {
+        "mysqlHost": "127.0.0.1",
+        "mysqlPort":"3306",
+        "mysqlUserName":"root",
+        "mysqlPassWord":"root",
+        "mysqlDbName":"bpool_local_db",
+        "tableName":"found_blocks"
+    },
  "trackers": [
         "balance",
         "currentVariables",

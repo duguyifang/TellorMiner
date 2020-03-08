@@ -5,18 +5,6 @@ import (
 	"fmt"
 	"os"
 	"time"
-
-	tellorCommon "github.com/tellor-io/TellorMiner/common"
-	"github.com/tellor-io/TellorMiner/config"
-	"github.com/tellor-io/TellorMiner/db"
-	"github.com/tellor-io/TellorMiner/pow"
-	"github.com/tellor-io/TellorMiner/util"
-<<<<<<< HEAD
-=======
-	"os"
-	"time"
-
-	"log"
 	"bytes"
 	"strconv"
 	"io/ioutil"
@@ -25,9 +13,11 @@ import (
 	"encoding/json"
 	"github.com/segmentio/kafka-go"
 	"github.com/segmentio/kafka-go/snappy"
-
-
->>>>>>> get job and send to kafka
+	tellorCommon "github.com/tellor-io/TellorMiner/common"
+	"github.com/tellor-io/TellorMiner/config"
+	"github.com/tellor-io/TellorMiner/db"
+	"github.com/tellor-io/TellorMiner/pow"
+	"github.com/tellor-io/TellorMiner/util"
 )
 
 type WorkSource interface {
@@ -43,15 +33,17 @@ type SolutionSink interface {
 type WorkMessage struct {
 	Challenge     string      `json:"challenge"`
 	Difficulty    *big.Int    `json:"difficulty"`
-	RequestID     *big.Int    `json:"request_id"`
+	RequestID     uint64      `json:"request_id"`
 	PublicAddress string      `json:"public_address"`
 	Height        uint64      `json:"height"`
 }
 
+// {"job_id":6801736108045500417,"request_id":5,"timestamp":144,"nonce":0100000073237e298804f453,"userId":1,"workerId":8892583734397622546,"workerFullName":"user1.simulator-00000"}
+
 type ShareMessage struct {
-	RequestID         *big.Int    `json:"request_id"`
-	Nonce             string      `json:"nonce"`
-	Jobid             string      `json:"job_id"`
+	RequestID         uint64      `json:"request_id"`
+	Nonce             string      `json:"nonce"` 
+	Jobid             uint64      `json:"job_id"`
 	UserId            int32       `json:"userId"`
 	WorkerId          int64       `json:"workerId"`
 	WorkerFullName    string      `json:"workerFullName"`
@@ -70,14 +62,8 @@ type MiningMgr struct {
 	exitCh  chan os.Signal
 	log     *util.Logger
 	Running bool
-<<<<<<< HEAD
-
 	group      *pow.MiningGroup
 	tasker     WorkSource
-=======
-	group  *pow.MiningGroup
-	tasker WorkSource
->>>>>>> get job and send to kafka
 	solHandler SolutionSink
 	dataRequester *DataRequester
 	//data requester's exit channel
@@ -87,54 +73,30 @@ type MiningMgr struct {
 	controllerProducer *kafka.Writer
 	processorConsumer *kafka.Reader
 	mysqlHandle       MysqlConnection
-	workmap map[*big.Int]*pow.Work
+	workmap map[uint64]*pow.Work
 }
 
 //CreateMiningManager creates a new manager that mananges mining and data requests
 func CreateMiningManager(ctx context.Context, exitCh chan os.Signal, submitter tellorCommon.TransactionSubmitter) (*MiningMgr, error) {
 	cfg := config.GetConfig()
 
-	// group, err := pow.SetupMiningGroup(cfg)
-	// if err != nil {
-	// 	return nil, fmt.Errorf("failed to setup miners: %s", err.Error())
-	// }
-
 	mng := &MiningMgr{
-<<<<<<< HEAD
 		exitCh:     exitCh,
 		log:        util.NewLogger("ops", "MiningMgr"),
 		Running:    false,
-		group:      group,
+		// group:      group,
 		tasker:     nil,
-=======
-		exitCh:  exitCh,
-		log:     util.NewLogger("ops", "MiningMgr"),
-		Running: false,
-		// group:   group,
-		tasker:  nil,
->>>>>>> get job and send to kafka
 		solHandler: nil,
 		ethurl:  cfg.NodeURL,
 	}
 
-<<<<<<< HEAD
-	if cfg.EnablePoolWorker {
-		pool := pow.CreatePool(cfg, group)
-		mng.tasker = pool
-		mng.solHandler = pool
-	} else {
-		proxy := ctx.Value(tellorCommon.DataProxyKey).(db.DataServerProxy)
-		mng.tasker = pow.CreateTasker(cfg, proxy)
-		mng.solHandler = pow.CreateSolutionHandler(cfg, submitter, proxy)
-		if cfg.RequestData > 0 {
-			fmt.Println("dataRequester created")
-			mng.dataRequester = CreateDataRequester(exitCh, submitter, 0, proxy)
-		}
-	}
-=======
 	proxy := ctx.Value(tellorCommon.DataProxyKey).(db.DataServerProxy)
 	mng.tasker = pow.CreateTasker(cfg, proxy)
 	mng.solHandler = pow.CreateSolutionHandler(cfg, submitter, proxy)
+	if cfg.RequestData > 0 {
+		fmt.Println("dataRequester created")
+		mng.dataRequester = CreateDataRequester(exitCh, submitter, 0, proxy)
+	}
 
 	mng.processorConsumer = kafka.NewReader(kafka.ReaderConfig{
 		Brokers:  []string{ cfg.Kafka.Brokers},
@@ -152,9 +114,7 @@ func CreateMiningManager(ctx context.Context, exitCh chan os.Signal, submitter t
 	})
 
 	mng.mysqlHandle.CreateMysqlConn(cfg)
-
-	mng.workmap = make(map[*big.Int]*pow.Work)
->>>>>>> get job and send to kafka
+	mng.workmap = make(map[uint64]*pow.Work)
 	return mng, nil
 }
 
@@ -165,8 +125,6 @@ func (mgr *MiningMgr) Start(ctx context.Context) {
 		cfg := config.GetConfig()
 
 		ticker := time.NewTicker(cfg.MiningInterruptCheckInterval.Duration)
-
-		//if you make these buffered, think about the effects on synchronization!
 		input := make(chan *pow.Work)
 		output := make(chan *pow.Result)
 		if cfg.RequestData > 0 {
@@ -180,10 +138,9 @@ func (mgr *MiningMgr) Start(ctx context.Context) {
 		sendWork := func() {
 			//if its nil, nothing new to report
 			work := mgr.tasker.GetWork()
-			log.Printf("====>  get work return <====")
 			if work != nil {
 				mgr.SendJobToKafka(work)
-				mgr.workmap[work.Challenge.RequestID] = work
+				mgr.workmap[work.Challenge.RequestID.Uint64()] = work
 			} else {
 				mgr.log.Info("====> current work is nill ")
 			}
@@ -208,7 +165,6 @@ func (mgr *MiningMgr) Start(ctx context.Context) {
 
 			//time to check for a new challenge
 			case _ = <-ticker.C:
-				log.Printf("====> it's time to get work <====")
 				mgr.log.Info("====> it's time to get work")
 				sendWork()
 			}
@@ -222,7 +178,7 @@ func (mgr *MiningMgr)SendJobToKafka(work *pow.Work) {
 	command := WorkMessage{
 	    fmt.Sprintf("%x", work.Challenge.Challenge),
 	    work.Challenge.Difficulty,
-	    work.Challenge.RequestID,
+	    work.Challenge.RequestID.Uint64(),
 		work.PublicAddr,
 	    height}
 	bytes, _ := json.Marshal(command)
@@ -246,13 +202,14 @@ func (mgr *MiningMgr)ConsumeSolvedShare(output chan *pow.Result) {
 			continue
 		}
 
+		mgr.log.Info("======> received solved share ", response)
 		work, ok := mgr.workmap[response.RequestID]
 		if ok {
 			mgr.log.Info("found wor in work map, to submit... ")
 			output <- &pow.Result{Work:work, Nonce:response.Nonce}
 
 		} else {
-			mgr.log.Error("cannot find the job in workmap")
+			mgr.log.Error("cannot find the job in response.RequestID : %d", response.RequestID)
 			continue
 		}
 
