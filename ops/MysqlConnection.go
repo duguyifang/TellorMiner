@@ -21,7 +21,7 @@ type FoundBlockInfo struct {
 	PublicAddress     string
 	Height            uint64
 	Nonce             string
-	Jobid             string
+	Jobid             uint64
 	UserId            int32
 	WorkerId          int64
 	WorkerFullName    string
@@ -37,8 +37,10 @@ func (handle *MysqlConnection) CreateMysqlConn(cfg *config.Config) {
 	cfg.MysqlConnectionInfo.Port, ")/", 
 	cfg.MysqlConnectionInfo.Dbname, "?charset=utf8"}, "")
 
+
     handle.log.Info("dbpath : " + path )
-	handle.DbHandle, _ = sql.Open("mysql", path)
+ 
+    handle.DbHandle, _ = sql.Open("mysql", path)
     
     handle.DbHandle.SetConnMaxLifetime(100)
     
@@ -62,8 +64,8 @@ func (handle *MysqlConnection) InsertFoundBlock(blockinfo FoundBlockInfo) (bool)
         return false
     }
     sql := "INSERT INTO " + handle.TableName 
-    sql += " (`challenge`,`difficulty`, `request_id`,`public_address`,`height`,`nonce`,`job_id`, `user_id`, `work_id`, `work_full_name`) "
-    sql += " values(?,?,?,?,?,?,?,?,?,?)"
+    sql += " (`challenge`,`difficulty`, `request_id`,`public_address`,`height`,`nonce`,`job_id`, `rewards`, `puid`, `worker_id`, `worker_full_name`) "
+    sql += " values(?,?,?,?,?,?,?,?,?,?,?)"
 
 	res, err := tx.Exec(sql,
 		blockinfo.Challenge,
@@ -73,7 +75,9 @@ func (handle *MysqlConnection) InsertFoundBlock(blockinfo FoundBlockInfo) (bool)
 		blockinfo.Height,
 		blockinfo.Nonce,
 		blockinfo.Jobid,
+		5,
 		blockinfo.UserId,
+		blockinfo.WorkerId,
 		blockinfo.WorkerFullName,
 	)
     if err != nil{
