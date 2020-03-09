@@ -53,6 +53,11 @@ type ShareMessage struct {
 	Height            uint64      `json:"height"`
 }
 
+type MiningJob struct {
+	NTime             int64
+	Work              *pow.Work
+}
+
 type HeightMessage struct {
 	Jsonrpc         string    `json:"jsonrpc"`
 	Id              int       `json:"id"`
@@ -76,7 +81,7 @@ type MiningMgr struct {
 	controllerProducer *kafka.Writer
 	processorConsumer *kafka.Reader
 	mysqlHandle       MysqlConnection
-	workmap map[uint64]*pow.Work
+	workmap map[uint64] MiningJob
 }
 
 //CreateMiningManager creates a new manager that mananges mining and data requests
@@ -114,7 +119,7 @@ func CreateMiningManager(ctx context.Context, exitCh chan os.Signal, submitter t
 
 	mng.mysqlHandle.CreateMysqlConn(cfg)
 
-	mng.workmap = make(map[uint64]*pow.Work)
+	mng.workmap = make(map[uint64]MiningJob)
 	return mng, nil
 }
 
@@ -133,7 +138,18 @@ func (mgr *MiningMgr) Start(ctx context.Context) {
 			work := mgr.tasker.GetWork()
 			if work != nil {
 				mgr.SendJobToKafka(work)
-				mgr.workmap[work.Challenge.RequestID.Uint64()] = work
+				miningjob := MiningJob{
+					time.Now().Unix(),
+					work,
+				}
+				mgr.workmap[work.Challenge.RequestID.Uint64()] = miningjob
+
+				for k, v := range mgr.workmap {
+					if v.NTime + 3600 < time.Now().Unix() {
+						mgr.log.Info("====> delete too old job request id : %d", k)
+						delete(mgr.workmap,k)
+					}
+				}
 			} else {
 				mgr.log.Info("====> current work is nill ")
 			}
@@ -195,11 +211,11 @@ func (mgr *MiningMgr)ConsumeSolvedShare(output chan *pow.Result) {
 			continue
 		}
 
-		mgr.log.Info("======> received solved share ", response)
-		work, ok := mgr.workmap[response.RequestID]
+		mgr.log.Info(">>>>>>>> received solved share ", response)
+		job, ok := mgr.workmap[response.RequestID]
 		if ok {
-			mgr.log.Info("found wor in work map, to submit... ")
-			output <- &pow.Result{Work:work, Nonce:response.Nonce}
+			mgr.log.Info("found job in work map, to submit... ")
+			output <- &pow.Result{Work:job.Work, Nonce:response.Nonce}
 
 		} else {
 			mgr.log.Error("cannot find the job in response.RequestID : %d", response.RequestID)
@@ -207,10 +223,10 @@ func (mgr *MiningMgr)ConsumeSolvedShare(output chan *pow.Result) {
 		}
 
 		var foundblockinfo FoundBlockInfo
-		foundblockinfo.Challenge =  fmt.Sprintf("%x", work.Challenge.Challenge)
-		foundblockinfo.Difficulty = work.Challenge.Difficulty.Uint64()
-		foundblockinfo.RequestID = work.Challenge.RequestID.Uint64()
-		foundblockinfo.PublicAddress = work.PublicAddr
+		foundblockinfo.Challenge =  fmt.Sprintf("%x", job.Work.Challenge.Challenge)
+		foundblockinfo.Difficulty = job.Work.Challenge.Difficulty.Uint64()
+		foundblockinfo.RequestID = job.Work.Challenge.RequestID.Uint64()
+		foundblockinfo.PublicAddress = job.Work.PublicAddr
 		foundblockinfo.Height = response.Height
 		foundblockinfo.Nonce = response.Nonce
 		foundblockinfo.Jobid = response.Jobid

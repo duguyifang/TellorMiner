@@ -13,6 +13,11 @@
     "gasMultiplier": 1,
     "gasMax":10,
     "useGPU":false,
+    "kafka": {
+        "brokers":"127.0.0.1:9092",
+        "jobTopic":"TrbRawGw",
+        "solvedShareTopic":"SolvedShareTopic"
+    },
     "mysqlConnectionInfo" : {
         "mysqlHost": "127.0.0.1",
         "mysqlPort":"3306",
