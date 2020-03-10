@@ -68,14 +68,14 @@ func (mt *MiningTasker) GetWork() *Work {
 
 	mt.log.Debug("Received data: %v", m)
 
-	// if stat := mt.checkDispute(m[dispKey]); stat == statusWaitNext {
-	// 	mt.log.Info("====> mt.checkDispute(m[dispKey])")
-	// 	return nil
-	// }
+	if stat := mt.checkDispute(m[dispKey]); stat == statusWaitNext {
+		mt.log.Info("====> mt.checkDispute(m[dispKey]) : statusWaitNext")
+		return nil
+	}
 
 	diff, stat := mt.getInt(m[db.DifficultyKey])
 	if stat == statusWaitNext || stat == statusFailure {
-		mt.log.Info("====> mt.getInt(m[db.DifficultyKey]")
+		mt.log.Info("====> stat == statusWaitNext || stat == statusFailure")
 		return nil
 	}
 
