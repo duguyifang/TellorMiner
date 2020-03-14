@@ -119,12 +119,7 @@ func CreateMiningManager(ctx context.Context, exitCh chan os.Signal, submitter t
 	})
 
 	mng.mysqlHandle.CreateMysqlConn(cfg)
-<<<<<<< HEAD
-	mng.workmap = make(map[uint64]*pow.Work)
-=======
-
 	mng.workmap = make(map[uint64]MiningJob)
->>>>>>> delete timeout job in workmap
 	return mng, nil
 }
 
