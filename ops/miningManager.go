@@ -227,6 +227,8 @@ func (mgr *MiningMgr)ConsumeSolvedShare(output chan *pow.Result) {
 		job, ok := mgr.workmap[response.RequestID]
 		if ok {
 			mgr.log.Info("found job in work map, to submit... ")
+			mgr.log.Info("challenge : %s", fmt.Sprintf("%x", job.Work.Challenge.Challenge))
+
 			output <- &pow.Result{Work:job.Work, Nonce:response.Nonce}
 
 		} else {

@@ -3,7 +3,7 @@ package ops
 import (
     "strings"
     "database/sql"
-
+    "time"
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/tellor-io/TellorMiner/util"
 	"github.com/tellor-io/TellorMiner/config"
@@ -64,8 +64,8 @@ func (handle *MysqlConnection) InsertFoundBlock(blockinfo FoundBlockInfo) (bool)
         return false
     }
     sql := "INSERT INTO " + handle.TableName 
-    sql += " (`challenge`,`difficulty`, `request_id`,`public_address`,`height`,`nonce`,`job_id`, `rewards`, `puid`, `worker_id`, `worker_full_name`) "
-    sql += " values(?,?,?,?,?,?,?,?,?,?,?)"
+    sql += " (`challenge`,`difficulty`, `request_id`,`public_address`,`height`,`nonce`,`job_id`, `rewards`, `puid`, `worker_id`, `worker_full_name`,`created_at`) "
+    sql += " values(?,?,?,?,?,?,?,?,?,?,?,?)"
 
 	res, err := tx.Exec(sql,
 		blockinfo.Challenge,
@@ -79,6 +79,7 @@ func (handle *MysqlConnection) InsertFoundBlock(blockinfo FoundBlockInfo) (bool)
 		blockinfo.UserId,
 		blockinfo.WorkerId,
 		blockinfo.WorkerFullName,
+		time.Now().Format("2006-01-02 15:04:05"),
 	)
     if err != nil{
         handle.log.Error("Exec fail : ", err)
