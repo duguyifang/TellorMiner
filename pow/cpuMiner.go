@@ -61,3 +61,29 @@ func hashFn(data []byte, result *big.Int) {
 	result.SetBytes(n[:])
 }
 
+func CheckPow(hash *HashSettings, Nonce string) (bool){
+	baseLen := len(hash.prefix)
+	hashInput := make([]byte, len(hash.prefix), len(hash.prefix))
+	copy(hashInput, hash.prefix)
+
+	numHash := new(big.Int)
+	x := new(big.Int)
+	compareZero := big.NewInt(0)
+	var data []byte = []byte(decodeHex(Nonce))
+
+	hashInput = hashInput[:baseLen]
+	hashInput = append(hashInput, data...)
+
+	fmt.Printf( "hashinput : %s ", fmt.Sprintf("%x", hashInput))
+	fmt.Printf( "difficulty : %d ", hash.difficulty)
+
+	hashFn(hashInput, numHash)
+	fmt.Printf( "difficulty : %x ", numHash)
+	
+	x.Mod(numHash, hash.difficulty)
+	if x.Cmp(compareZero) == 0 {
+		return true
+	} else {
+		return false
+	}
+}

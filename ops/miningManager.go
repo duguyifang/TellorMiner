@@ -216,6 +216,15 @@ func (mgr *MiningMgr)ConsumeSolvedShare(output chan *pow.Result) {
 		if ok {
 			mgr.log.Info("found job in work map, to submit... ")
 			mgr.log.Info("challenge : %s", fmt.Sprintf("%x", job.Work.Challenge.Challenge))
+			mgr.log.Info("publicaddress : %s", job.Work.PublicAddr)
+			mgr.log.Info("Nonce : %s", response.Nonce)
+
+			hashsetting := pow.NewHashSettings(job.Work.Challenge, job.Work.PublicAddr)
+			if(pow.CheckPow(hashsetting, response.Nonce)) {
+				mgr.log.Info("pow check success")
+			} else {
+				mgr.log.Info("pow check failed")
+			}
 
 			output <- &pow.Result{Work:job.Work, Nonce:response.Nonce}
 
