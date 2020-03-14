@@ -26,7 +26,7 @@
         "mysqlDbName":"bpool_local_db",
         "tableName":"found_blocks"
     },
- "trackers": [
+    "trackers": [
         "balance",
         "currentVariables",
         "disputeStatus",
