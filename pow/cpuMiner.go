@@ -69,7 +69,7 @@ func CheckPow(hash *HashSettings, Nonce string) (bool){
 	numHash := new(big.Int)
 	x := new(big.Int)
 	compareZero := big.NewInt(0)
-	var data []byte = []byte(decodeHex(Nonce))
+	var data []byte = []byte(Nonce)
 
 	hashInput = hashInput[:baseLen]
 	hashInput = append(hashInput, data...)

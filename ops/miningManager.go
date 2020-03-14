@@ -17,10 +17,9 @@ import (
 	"net/http"
 	"math/big"
 	"encoding/json"
+	"encoding/hex"
 	"github.com/segmentio/kafka-go"
 	"github.com/segmentio/kafka-go/snappy"
-
-
 )
 
 type WorkSource interface {
@@ -218,15 +217,16 @@ func (mgr *MiningMgr)ConsumeSolvedShare(output chan *pow.Result) {
 			mgr.log.Info("challenge : %s", fmt.Sprintf("%x", job.Work.Challenge.Challenge))
 			mgr.log.Info("publicaddress : %s", job.Work.PublicAddr)
 			mgr.log.Info("Nonce : %s", response.Nonce)
+			nonce := string(decodeHex(response.Nonce))
 
 			hashsetting := pow.NewHashSettings(job.Work.Challenge, job.Work.PublicAddr)
-			if(pow.CheckPow(hashsetting, response.Nonce)) {
+			if(pow.CheckPow(hashsetting, nonce)) {
 				mgr.log.Info("pow check success")
 			} else {
 				mgr.log.Info("pow check failed")
 			}
 
-			output <- &pow.Result{Work:job.Work, Nonce:response.Nonce}
+			output <- &pow.Result{Work:job.Work, Nonce:nonce}
 
 		} else {
 			mgr.log.Error("cannot find the job in response.RequestID : %d", response.RequestID)
@@ -281,4 +281,13 @@ func (mgr *MiningMgr)GetCurrentEthHeight() uint64 {
 	mgr.log.Info("read response: %s", string(body))
 	height, _ := strconv.ParseUint(j.Result, 0, 64)
 	return height
+}
+
+func decodeHex(s string) []byte {
+	b, err := hex.DecodeString(s)
+	if err != nil {
+		panic(err)
+	}
+
+	return b
 }
