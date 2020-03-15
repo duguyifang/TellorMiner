@@ -136,7 +136,8 @@ func (mgr *MiningMgr) Start(ctx context.Context) {
 			//if its nil, nothing new to report
 			work := mgr.tasker.GetWork()
 			if work != nil {
-				mgr.SendJobToKafka(work)
+				height := mgr.GetCurrentEthHeight()
+				mgr.SendJobToKafka(work, height)
 				miningjob := MiningJob{
 					time.Now().Unix(),
 					work,
@@ -145,7 +146,7 @@ func (mgr *MiningMgr) Start(ctx context.Context) {
 					mgr.log.Info("====> delete old job request id : %d", k)
 					delete(mgr.workmap,k)
 				}
-				mgr.workmap[work.Challenge.RequestID.Uint64()] = miningjob
+				mgr.workmap[height] = miningjob
 			} else {
 				mgr.log.Info("====> current work is nill ")
 			}
@@ -178,8 +179,8 @@ func (mgr *MiningMgr) Start(ctx context.Context) {
 }
 
 
-func (mgr *MiningMgr)SendJobToKafka(work *pow.Work) {
-	height := mgr.GetCurrentEthHeight()
+func (mgr *MiningMgr)SendJobToKafka(work *pow.Work, height uint64) {
+
 	command := WorkMessage{
 	    fmt.Sprintf("%x", work.Challenge.Challenge),
 	    work.Challenge.Difficulty,
@@ -208,25 +209,25 @@ func (mgr *MiningMgr)ConsumeSolvedShare(output chan *pow.Result) {
 		}
 
 		mgr.log.Info(">>>>>>>> received solved share ", response)
-		job, ok := mgr.workmap[response.RequestID]
+		job, ok := mgr.workmap[response.Height]
 		if ok {
 			mgr.log.Info("found job in work map, to submit... ")
-			mgr.log.Info("challenge : %s", fmt.Sprintf("%x", job.Work.Challenge.Challenge))
-			mgr.log.Info("publicaddress : %s", job.Work.PublicAddr)
-			mgr.log.Info("Nonce : %s", response.Nonce)
+			// mgr.log.Info("challenge : %s", fmt.Sprintf("%x", job.Work.Challenge.Challenge))
+			// mgr.log.Info("publicaddress : %s", job.Work.PublicAddr)
+			// mgr.log.Info("Nonce : %s", response.Nonce)
 			nonce := string(decodeHex(response.Nonce))
 
-			hashsetting := pow.NewHashSettings(job.Work.Challenge, job.Work.PublicAddr)
-			if(pow.CheckPow(hashsetting, nonce)) {
-				mgr.log.Info("pow check success")
-			} else {
-				mgr.log.Info("pow check failed")
-			}
+			// hashsetting := pow.NewHashSettings(job.Work.Challenge, job.Work.PublicAddr)
+			// if(pow.CheckPow(hashsetting, nonce)) {
+			// 	mgr.log.Info("pow check success")
+			// } else {
+			// 	mgr.log.Info("pow check failed")
+			// }
 
 			output <- &pow.Result{Work:job.Work, Nonce:nonce}
 
 		} else {
-			mgr.log.Error("cannot find the job in response.RequestID : %d", response.RequestID)
+			mgr.log.Error("cannot find the job in height : %d", response.Height)
 			continue
 		}
 
