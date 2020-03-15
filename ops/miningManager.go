@@ -141,14 +141,11 @@ func (mgr *MiningMgr) Start(ctx context.Context) {
 					time.Now().Unix(),
 					work,
 				}
-				mgr.workmap[work.Challenge.RequestID.Uint64()] = miningjob
-
-				for k, v := range mgr.workmap {
-					if v.NTime + 3600 < time.Now().Unix() {
-						mgr.log.Info("====> delete too old job request id : %d", k)
-						delete(mgr.workmap,k)
-					}
+				for k, _ := range mgr.workmap {
+					mgr.log.Info("====> delete old job request id : %d", k)
+					delete(mgr.workmap,k)
 				}
+				mgr.workmap[work.Challenge.RequestID.Uint64()] = miningjob
 			} else {
 				mgr.log.Info("====> current work is nill ")
 			}
