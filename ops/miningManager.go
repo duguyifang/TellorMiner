@@ -79,7 +79,7 @@ type MiningMgr struct {
 	ethurl string
 	controllerProducer *kafka.Writer
 	processorConsumer *kafka.Reader
-	mysqlHandle       MysqlConnection
+	mysqlHandle       *util.MysqlConnection
 	workmap map[uint64] MiningJob
 }
 
@@ -116,7 +116,7 @@ func CreateMiningManager(ctx context.Context, exitCh chan os.Signal, submitter t
 		CompressionCodec: snappy.NewCompressionCodec(),
 	})
 
-	mng.mysqlHandle.CreateMysqlConn(cfg)
+	mng.mysqlHandle = util.CreateMysqlConn(cfg)
 
 	mng.workmap = make(map[uint64]MiningJob)
 	return mng, nil
@@ -131,12 +131,13 @@ func (mgr *MiningMgr) Start(ctx context.Context) {
 		ticker := time.NewTicker(cfg.MiningInterruptCheckInterval.Duration)
 		input := make(chan *pow.Work)
 		output := make(chan *pow.Result)
+
 		go mgr.ConsumeSolvedShare(output)
+		go mgr.ConsumeMysqlMessage()
+
 		sendWork := func () {
-			//if its nil, nothing new to report
 			work := mgr.tasker.GetWork()
 			if work != nil {
-				// height := mgr.GetCurrentEthHeight()
 				height := time.Now().Unix()
 				mgr.SendJobToKafka(work, uint64(height))
 				miningjob := MiningJob{
@@ -152,16 +153,14 @@ func (mgr *MiningMgr) Start(ctx context.Context) {
 				mgr.log.Info("====> current work is nill ")
 			}
 		}
-		//send the initial challenge
 		sendWork()
+		updateChan := util.GetInstance()
+		updateChan.IsReady = true
 		for {
 			select {
-			//boss wants us to quit for the day
 			case <-mgr.exitCh:
-				//exit
 				input <- nil
 
-			//found a solution
 			case result := <- output:
 				if result == nil {
 					mgr.Running = false
@@ -170,10 +169,15 @@ func (mgr *MiningMgr) Start(ctx context.Context) {
 				mgr.solHandler.Submit(ctx, result)
 				sendWork()
 
-			//time to check for a new challenge
 			case _ = <-ticker.C:
 				mgr.log.Info("====> it's time to get work")
 				sendWork()
+			case _ = <- updateChan.UpdateChallenge:
+				mgr.log.Info("====> challenge  have updated so get work now")
+				sendWork()
+			case tx := <- updateChan.UpdateTx:
+				mgr.log.Info("====> received update tx message ,translate %s ", tx)
+				mgr.mysqlHandle.UpdateTx <- tx
 			}
 		}
 	}(ctx)
@@ -218,13 +222,6 @@ func (mgr *MiningMgr)ConsumeSolvedShare(output chan *pow.Result) {
 			mgr.log.Info("Nonce : %s", response.Nonce)
 			nonce := string(decodeHex(response.Nonce))
 
-			// hashsetting := pow.NewHashSettings(job.Work.Challenge, job.Work.PublicAddr)
-			// if(pow.CheckPow(hashsetting, nonce)) {
-			// 	mgr.log.Info("pow check success")
-			// } else {
-			// 	mgr.log.Info("pow check failed")
-			// }
-
 			output <- &pow.Result{Work:job.Work, Nonce:nonce}
 
 		} else {
@@ -232,7 +229,7 @@ func (mgr *MiningMgr)ConsumeSolvedShare(output chan *pow.Result) {
 			continue
 		}
 
-		var foundblockinfo FoundBlockInfo
+		var foundblockinfo util.FoundBlockInfo
 		foundblockinfo.Challenge =  fmt.Sprintf("%x", job.Work.Challenge.Challenge)
 		foundblockinfo.Difficulty = job.Work.Challenge.Difficulty.Uint64()
 		foundblockinfo.RequestID = job.Work.Challenge.RequestID.Uint64()
@@ -244,9 +241,7 @@ func (mgr *MiningMgr)ConsumeSolvedShare(output chan *pow.Result) {
 		foundblockinfo.WorkerId = response.WorkerId
 		foundblockinfo.WorkerFullName = response.WorkerFullName
 
-		if ok = mgr.mysqlHandle.InsertFoundBlock(foundblockinfo); !ok {
-			mgr.log.Error("inset found block to mysql failed ")
-		}
+		mgr.mysqlHandle.StoreFoundBlock <- foundblockinfo
 	}
 }
 
@@ -280,6 +275,26 @@ func (mgr *MiningMgr)GetCurrentEthHeight() uint64 {
 	mgr.log.Info("read response: %s", string(body))
 	height, _ := strconv.ParseUint(j.Result, 0, 64)
 	return height
+}
+
+func (mgr *MiningMgr)ConsumeMysqlMessage() {
+    for{
+		select {
+		case tx := <- mgr.mysqlHandle.UpdateTx:
+			mgr.log.Info("====> update tx to mysql tx: %s", tx)
+			mgr.log.Info("====> update tx to mysql challenge: %s", mgr.mysqlHandle.CurrentChallenge)
+			mgr.mysqlHandle.UpdateFoundBlock(mgr.mysqlHandle.CurrentChallenge, tx)
+
+		case foundblockinfo := <- mgr.mysqlHandle.StoreFoundBlock:
+			mgr.mysqlHandle.CurrentChallenge = foundblockinfo.Challenge
+			mgr.log.Info("====> insert foundblock to mysql %s ", mgr.mysqlHandle.CurrentChallenge)
+			if ok := mgr.mysqlHandle.InsertFoundBlock(foundblockinfo); !ok {
+		        mgr.log.Error("inset foundblock to mysql failed ")
+		    } else {
+				mgr.log.Info("insert foundblock to mysql success!")
+			}
+		}
+	}
 }
 
 func decodeHex(s string) []byte {
