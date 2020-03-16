@@ -136,8 +136,9 @@ func (mgr *MiningMgr) Start(ctx context.Context) {
 			//if its nil, nothing new to report
 			work := mgr.tasker.GetWork()
 			if work != nil {
-				height := mgr.GetCurrentEthHeight()
-				mgr.SendJobToKafka(work, height)
+				// height := mgr.GetCurrentEthHeight()
+				height := time.Now().Unix()
+				mgr.SendJobToKafka(work, uint64(height))
 				miningjob := MiningJob{
 					time.Now().Unix(),
 					work,
@@ -146,7 +147,7 @@ func (mgr *MiningMgr) Start(ctx context.Context) {
 					mgr.log.Info("====> delete old job request id : %d", k)
 					delete(mgr.workmap,k)
 				}
-				mgr.workmap[height] = miningjob
+				mgr.workmap[uint64(height)] = miningjob
 			} else {
 				mgr.log.Info("====> current work is nill ")
 			}
@@ -212,9 +213,9 @@ func (mgr *MiningMgr)ConsumeSolvedShare(output chan *pow.Result) {
 		job, ok := mgr.workmap[response.Height]
 		if ok {
 			mgr.log.Info("found job in work map, to submit... ")
-			// mgr.log.Info("challenge : %s", fmt.Sprintf("%x", job.Work.Challenge.Challenge))
-			// mgr.log.Info("publicaddress : %s", job.Work.PublicAddr)
-			// mgr.log.Info("Nonce : %s", response.Nonce)
+			mgr.log.Info("challenge : %s", fmt.Sprintf("%x", job.Work.Challenge.Challenge))
+			mgr.log.Info("publicaddress : %s", job.Work.PublicAddr)
+			mgr.log.Info("Nonce : %s", response.Nonce)
 			nonce := string(decodeHex(response.Nonce))
 
 			// hashsetting := pow.NewHashSettings(job.Work.Challenge, job.Work.PublicAddr)
