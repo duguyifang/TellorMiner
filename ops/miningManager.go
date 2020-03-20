@@ -330,7 +330,7 @@ func (mgr *MiningMgr)GetCurrentRewards() uint64 {
 	}
 	mgr.log.Info("read response: %s", string(body))
 
-	reward, _ := strconv.ParseUint(j.Result, 16, 64)
+	reward, _ := strconv.ParseUint(j.Result, 0, 64)
 	return reward
 }
 
