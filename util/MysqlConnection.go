@@ -23,6 +23,7 @@ type FoundBlockInfo struct {
 	RequestID         uint64
 	PublicAddress     string
 	Height            uint64
+	Reward            uint64
 	Nonce             string
 	Jobid             uint64
 	UserId            int32
@@ -99,7 +100,7 @@ func (handle *MysqlConnection) InsertFoundBlock(blockinfo FoundBlockInfo) (bool)
 		blockinfo.Height,
 		blockinfo.Nonce,
 		blockinfo.Jobid,
-		5,
+		blockinfo.Reward,
 		blockinfo.UserId,
 		blockinfo.WorkerId,
 		blockinfo.WorkerFullName,

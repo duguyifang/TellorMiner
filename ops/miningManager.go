@@ -54,10 +54,11 @@ type ShareMessage struct {
 
 type MiningJob struct {
 	NTime             int64
+	Reward            uint64
 	Work              *pow.Work
 }
 
-type HeightMessage struct {
+type RpcMessage struct {
 	Jsonrpc         string    `json:"jsonrpc"`
 	Id              int       `json:"id"`
 	Result          string    `json:"result"`
@@ -140,8 +141,10 @@ func (mgr *MiningMgr) Start(ctx context.Context) {
 			if work != nil {
 				height := time.Now().Unix()
 				mgr.SendJobToKafka(work, uint64(height))
+				reward := mgr.GetCurrentRewards()
 				miningjob := MiningJob{
 					time.Now().Unix(),
+					reward,
 					work,
 				}
 				for k, _ := range mgr.workmap {
@@ -240,6 +243,7 @@ func (mgr *MiningMgr)ConsumeSolvedShare(output chan *pow.Result) {
 		foundblockinfo.UserId = response.UserId
 		foundblockinfo.WorkerId = response.WorkerId
 		foundblockinfo.WorkerFullName = response.WorkerFullName
+		foundblockinfo.Reward = job.Reward
 
 		mgr.mysqlHandle.StoreFoundBlock <- foundblockinfo
 	}
@@ -266,7 +270,7 @@ func (mgr *MiningMgr)GetCurrentEthHeight() uint64 {
 		return 0
 	}
 
-	var j = new(HeightMessage)
+	var j = new(RpcMessage)
 	err = json.Unmarshal(body, &j)
 	if err != nil {
 		mgr.log.Error("Error decoding job json: %s", err.Error())
@@ -295,6 +299,39 @@ func (mgr *MiningMgr)ConsumeMysqlMessage() {
 			}
 		}
 	}
+}
+
+func (mgr *MiningMgr)GetCurrentRewards() uint64 {
+
+	data := "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"eth_call\",\"params\":[{\"to\":\"0x0ba45a8b5d5575935b8158a88c631e9f9c95a2e5\",\"data\":\"0x612c8f7f9b6853911475b07474368644a0d922ee13bc76a15cd3e97d3e334326424a47d4\"}, \"latest\"]}"
+    //{"jsonrpc":"2.0","id":1,"result":"0x00000000000000000000000000000000000000000000000041743c4745899fbf"}
+	req, err := http.NewRequest("POST", mgr.ethurl, bytes.NewBuffer([]byte(data)))
+	req.Header.Set("Accept", "application/json")
+	req.Header.Set("Content-Type", "application/json")
+	cli := &http.Client{}
+	resp, err := cli.Do(req)
+	if err != nil {
+		mgr.log.Error("failed to get eth height from node: %s", err.Error())
+		return 0
+	}
+	defer resp.Body.Close()
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		mgr.log.Error("failed to read response: %s", err.Error())
+		return 0
+	}
+
+	var j = new(RpcMessage)
+	err = json.Unmarshal(body, &j)
+	if err != nil {
+		mgr.log.Error("Error decoding job json: %s", err.Error())
+		return 0
+	}
+	mgr.log.Info("read response: %s", string(body))
+
+	reward, _ := strconv.ParseUint(j.Result, 16, 64)
+	return reward
 }
 
 func decodeHex(s string) []byte {
