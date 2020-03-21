@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"bytes"
+	"strings"
 	"strconv"
 	"io/ioutil"
 	"net/http"
@@ -38,9 +39,8 @@ type WorkMessage struct {
 	RequestID     uint64      `json:"request_id"`
 	PublicAddress string      `json:"public_address"`
 	Height        uint64      `json:"height"`
+	Ntime         uint64      `json:"ntime"`
 }
-
-// {"job_id":6801736108045500417,"request_id":5,"timestamp":144,"nonce":0100000073237e298804f453,"userId":1,"workerId":8892583734397622546,"workerFullName":"user1.simulator-00000"}
 
 type ShareMessage struct {
 	RequestID         uint64      `json:"request_id"`
@@ -50,10 +50,11 @@ type ShareMessage struct {
 	WorkerId          int64       `json:"workerId"`
 	WorkerFullName    string      `json:"workerFullName"`
 	Height            uint64      `json:"height"`
+	Ntime             uint64      `json:"ntime"`
+	PublicAddress     string      `json:"publicAddress"`
 }
 
 type MiningJob struct {
-	NTime             int64
 	Reward            uint64
 	Work              *pow.Work
 }
@@ -143,7 +144,6 @@ func (mgr *MiningMgr) Start(ctx context.Context) {
 				mgr.SendJobToKafka(work, uint64(height))
 				reward := mgr.GetCurrentRewards()
 				miningjob := MiningJob{
-					time.Now().Unix(),
 					reward,
 					work,
 				}
@@ -194,6 +194,7 @@ func (mgr *MiningMgr)SendJobToKafka(work *pow.Work, height uint64) {
 	    work.Challenge.Difficulty,
 	    work.Challenge.RequestID.Uint64(),
 		work.PublicAddr,
+		height,
 	    height}
 	bytes, _ := json.Marshal(command)
 	mgr.log.Info("====> send work to kafka : %s", string(bytes))
@@ -217,15 +218,22 @@ func (mgr *MiningMgr)ConsumeSolvedShare(output chan *pow.Result) {
 		}
 
 		mgr.log.Info(">>>>>>>> received solved share ", response)
-		job, ok := mgr.workmap[response.Height]
+		job, ok := mgr.workmap[response.Ntime]
 		if ok {
 			mgr.log.Info("found job in work map, to submit... ")
 			mgr.log.Info("challenge : %s", fmt.Sprintf("%x", job.Work.Challenge.Challenge))
-			mgr.log.Info("publicaddress : %s", job.Work.PublicAddr)
+			mgr.log.Info("current miner publicaddress : %s", job.Work.PublicAddr)
+			mgr.log.Info("share publicaddress : %s", job.Work.PublicAddr)
 			mgr.log.Info("Nonce : %s", response.Nonce)
-			nonce := string(decodeHex(response.Nonce))
 
-			output <- &pow.Result{Work:job.Work, Nonce:nonce}
+			if(strings.Compare(job.Work.PublicAddr, response.PublicAddress) == 0) {
+				nonce := string(decodeHex(response.Nonce))
+
+				output <- &pow.Result{Work:job.Work, Nonce:nonce}
+			} else {
+				mgr.log.Info("share publicaddress : %s", job.Work.PublicAddr)
+				continue
+			}
 
 		} else {
 			mgr.log.Error("cannot find the job in height : %d", response.Height)
@@ -247,38 +255,6 @@ func (mgr *MiningMgr)ConsumeSolvedShare(output chan *pow.Result) {
 
 		mgr.mysqlHandle.StoreFoundBlock <- foundblockinfo
 	}
-}
-
-func (mgr *MiningMgr)GetCurrentEthHeight() uint64 {
-
-	data := "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"eth_blockNumber\"}"
-
-	req, err := http.NewRequest("POST", mgr.ethurl, bytes.NewBuffer([]byte(data)))
-	req.Header.Set("Accept", "application/json")
-	req.Header.Set("Content-Type", "application/json")
-	cli := &http.Client{}
-	resp, err := cli.Do(req)
-	if err != nil {
-		mgr.log.Error("failed to get eth height from node: %s", err.Error())
-		return 0
-	}
-	defer resp.Body.Close()
-
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		mgr.log.Error("failed to read response: %s", err.Error())
-		return 0
-	}
-
-	var j = new(RpcMessage)
-	err = json.Unmarshal(body, &j)
-	if err != nil {
-		mgr.log.Error("Error decoding job json: %s", err.Error())
-		return 0
-	}
-	mgr.log.Info("read response: %s", string(body))
-	height, _ := strconv.ParseUint(j.Result, 0, 64)
-	return height
 }
 
 func (mgr *MiningMgr)ConsumeMysqlMessage() {
