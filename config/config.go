@@ -4,11 +4,12 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"github.com/joho/godotenv"
 	"io/ioutil"
 	"os"
 	"strings"
 	"time"
+
+	"github.com/joho/godotenv"
 )
 
 //unfortunate hack to enable json parsing of human readable time strings
@@ -39,51 +40,39 @@ func (d *Duration) UnmarshalJSON(b []byte) error {
 	}
 }
 
-type GPUConfig struct {
-	//number of threads in a workgroup
-	GroupSize int `json:"groupSize"`
-	//total number of threads
-	Groups int `json:"groups"`
-	//number of iterations within a thread
-	Count uint32 `json:"count"`
-
-	Disabled bool `json:"disabled"`
-}
-
 //Config holds global config info derived from config.json
 type Config struct {
-	ContractAddress              string                `json:"contractAddress"`
-	NodeURL                      string                `json:"nodeURL"`
-	DatabaseURL                  string                `json:"databaseURL"`
-	PublicAddress                string                `json:"publicAddress"`
-	EthClientTimeout             uint                  `json:"ethClientTimeout"`
-	TrackerSleepCycle            Duration              `json:"trackerCycle"`
-	Trackers                     []string              `json:"trackers"`
-	DBFile                       string                `json:"dbFile"`
-	ServerHost                   string                `json:"serverHost"`
-	ServerPort                   uint                  `json:"serverPort"`
-	FetchTimeout                 Duration              `json:"fetchTimeout"`
-	RequestData                  uint                  `json:"requestData"`
-	MinConfidence                float64                 `json:"minConfidence"`
-	RequestDataInterval          Duration              `json:"requestDataInterval"`
-	RequestTips                  int64                 `json:"requestTips"`
-	MiningInterruptCheckInterval Duration              `json:"miningInterruptCheckInterval"`
-	GasMultiplier                float32               `json:"gasMultiplier"`
-	GasMax                       uint                  `json:"gasMax"`
-	NumProcessors                int                   `json:"numProcessors"`
-	Heartbeat                    Duration              `json:"heartbeat"`
-	ServerWhitelist              []string              `json:"serverWhitelist"`
-	GPUConfig                    map[string]*GPUConfig `json:"gpuConfig"`
-	EnablePoolWorker             bool                  `json:"enablePoolWorker"`
-	Worker                       string                `json:"worker"`
-	Password                     string                `json:"password"`
-	PoolURL                      string                `json:"poolURL"`
-	IndexFolder                  string               `json:"indexFolder"`
-	DisputeTimeDelta             Duration              `json:"disputeTimeDelta"` //ignore data further than this away from the value we are checking
-	DisputeThreshold             float64               `json:"disputeThreshold"` //maximum allowed relative difference between observed and submitted value
+	ContractAddress              string   `json:"contractAddress"`
+	NodeURL                      string   `json:"nodeURL"`
+	DatabaseURL                  string   `json:"databaseURL"`
+	PublicAddress                string   `json:"publicAddress"`
+	EthClientTimeout             uint     `json:"ethClientTimeout"`
+	TrackerSleepCycle            Duration `json:"trackerCycle"`
+	Trackers                     []string `json:"trackers"`
+	DBFile                       string   `json:"dbFile"`
+	ServerHost                   string   `json:"serverHost"`
+	ServerPort                   uint     `json:"serverPort"`
+	FetchTimeout                 Duration `json:"fetchTimeout"`
+	RequestData                  uint     `json:"requestData"`
+	MinConfidence                float64  `json:"minConfidence"`
+	RequestDataInterval          Duration `json:"requestDataInterval"`
+	RequestTips                  int64    `json:"requestTips"`
+	MiningInterruptCheckInterval Duration `json:"miningInterruptCheckInterval"`
+	GasMultiplier                float32  `json:"gasMultiplier"`
+	GasMax                       uint     `json:"gasMax"`
+	NumProcessors                int      `json:"numProcessors"`
+	Heartbeat                    Duration `json:"heartbeat"`
+	ServerWhitelist              []string `json:"serverWhitelist"`
+	EnablePoolWorker             bool     `json:"enablePoolWorker"`
+	Worker                       string   `json:"worker"`
+	Password                     string   `json:"password"`
+	PoolURL                      string   `json:"poolURL"`
+	IndexFolder                  string   `json:"indexFolder"`
+	DisputeTimeDelta             Duration `json:"disputeTimeDelta"` //ignore data further than this away from the value we are checking
+	DisputeThreshold             float64  `json:"disputeThreshold"` //maximum allowed relative difference between observed and submitted value
 
 	//config parameters excluded from the json config file
-	PrivateKey                   string 			   `json:"privateKey"`
+	PrivateKey string `json:"privateKey"`
 }
 
 const defaultTimeout = 30 * time.Second //30 second fetch timeout
@@ -92,7 +81,7 @@ const defaultRequestInterval = 30 * time.Second //30 seconds between data reques
 const defaultMiningInterrupt = 15 * time.Second //every 15 seconds, check for new challenges that could interrupt current mining
 const defaultCores = 2
 
-const defaultHeartbeat = 15 * time.Second       //check miner speed every 10 ^ 8 cycles
+const defaultHeartbeat = 15 * time.Second //check miner speed every 10 ^ 8 cycles
 var (
 	config *Config
 )
@@ -192,7 +181,7 @@ func validateConfig(cfg *Config) error {
 	if err != nil || len(b) != 20 {
 		return fmt.Errorf("expecting 40 hex character public address, got \"%s\"", cfg.PublicAddress)
 	}
-	if cfg.EnablePoolWorker  {
+	if cfg.EnablePoolWorker {
 		if len(cfg.Worker) == 0 {
 			return fmt.Errorf("worker name required for pool")
 		}
@@ -214,21 +203,6 @@ func validateConfig(cfg *Config) error {
 
 		if cfg.GasMultiplier < 0 || cfg.GasMultiplier > 20 {
 			return fmt.Errorf("gas multiplier out of range [0, 20] %f", cfg.GasMultiplier)
-		}
-	}
-
-	for name, gpuConfig := range cfg.GPUConfig {
-		if gpuConfig.Disabled {
-			continue
-		}
-		if gpuConfig.Count == 0 {
-			return fmt.Errorf("gpu '%s' requires 'count' > 0", name)
-		}
-		if gpuConfig.GroupSize == 0 {
-			return fmt.Errorf("gpu '%s' requires 'groupSize' > 0", name)
-		}
-		if gpuConfig.Groups == 0 {
-			return fmt.Errorf("gpu '%s' requires 'groups' > 0", name)
 		}
 	}
 
