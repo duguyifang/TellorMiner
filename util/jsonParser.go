@@ -22,7 +22,7 @@ func ParseQueryString(_query string) (url string, args [][]string) {
 	url = rgx.FindStringSubmatch(_query)[1]
 	result := strings.Split(_query, ")")
 	groups := strings.Split(result[1], ",")
-	for _,group := range groups {
+	for _, group := range groups {
 		args = append(args, strings.Split(group, ".")[1:])
 	}
 
@@ -36,11 +36,11 @@ func ParsePayload(payload []byte, args [][]string) ([]float64, error) {
 		fmt.Println(err)
 	}
 	results := make([]float64, len(args))
-	for i,argGroup := range args {
+	for i, argGroup := range args {
 		result, err := dumpJSON(f, "root", argGroup, &dumpJsonState{})
 		if err != nil {
 			//fmt.Println("ERROR", err)
-			return nil,errors.New("JSON Parsing error")
+			return nil, errors.New("JSON Parsing error")
 		}
 		val, _ := strconv.ParseFloat(fmt.Sprintf("%v", result), 64)
 		results[i] = val
@@ -50,10 +50,10 @@ func ParsePayload(payload []byte, args [][]string) ([]float64, error) {
 }
 
 type dumpJsonState struct {
-	Bi int
-	Res float64
-	Good bool
-	FRes float64
+	Bi       int
+	Res      float64
+	Good     bool
+	FRes     float64
 	Finished bool
 }
 
@@ -83,17 +83,17 @@ func dumpJSON(v interface{}, kn string, args []string, s *dumpJsonState) (float6
 					res, err := converter(v)
 					if err != nil {
 						fmt.Println(err)
-						return 0, false,true
+						return 0, false, true
 					}
 					if res != 1 {
-						return res, true,true
+						return res, true, true
 					}
-					return 0, false,true
+					return 0, false, true
 				}
 			}
 
 		}
-		return 0, false,false
+		return 0, false, false
 	}
 
 	iterSlice := func(x []interface{}, root string, args []string) (val float64, status bool, good bool) {
@@ -123,18 +123,18 @@ func dumpJSON(v interface{}, kn string, args []string, s *dumpJsonState) (float6
 							res, err := converter(v)
 							if err != nil {
 								fmt.Println(err)
-								return 0, false,true
+								return 0, false, true
 							}
 							if res != 1 {
-								return res, true,true
+								return res, true, true
 							}
-							return 0, false,true
+							return 0, false, true
 						}
 					}
 				}
 			}
 		}
-		return 0, false,false
+		return 0, false, false
 	}
 
 	switch vv := v.(type) {
@@ -145,18 +145,18 @@ func dumpJSON(v interface{}, kn string, args []string, s *dumpJsonState) (float6
 	case int:
 		//fmt.Printf("%s => (int) %f\n", kn, vv)
 	case map[string]interface{}:
-		s.Res, s.Finished,s.Good = iterMap(vv, kn, args)
-		if !s.Good{
-			return 0,errors.New("Itermap Error")
+		s.Res, s.Finished, s.Good = iterMap(vv, kn, args)
+		if !s.Good {
+			return 0, errors.New("Itermap Error")
 		}
 		if s.Finished {
 			s.FRes = s.Res
 			return s.Res, nil
 		}
 	case []interface{}:
-		s.Res, s.Finished,s.Good = iterSlice(vv, kn, args)
-		if !s.Good{
-			return 0,errors.New("IterSlice Error")
+		s.Res, s.Finished, s.Good = iterSlice(vv, kn, args)
+		if !s.Good {
+			return 0, errors.New("IterSlice Error")
 		}
 		if s.Finished {
 			s.FRes = s.Res

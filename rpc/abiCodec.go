@@ -105,4 +105,3 @@ func AllEvents() (map[[32]byte]abi.Event, error) {
 
 	return eventMap, nil
 }
-

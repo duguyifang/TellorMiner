@@ -2,13 +2,8 @@ package pow
 
 import (
 	"context"
-	"fmt"
-	"math/big"
-	"strings"
-	"os"
-	"io/ioutil"
 	"encoding/json"
-	"strconv"
+	"fmt"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -16,6 +11,11 @@ import (
 	"github.com/tellor-io/TellorMiner/config"
 	"github.com/tellor-io/TellorMiner/db"
 	"github.com/tellor-io/TellorMiner/util"
+	"io/ioutil"
+	"math/big"
+	"os"
+	"strconv"
+	"strings"
 )
 
 /**
@@ -83,12 +83,12 @@ func (s *SolutionHandler) Submit(ctx context.Context, result *Result) {
 			json.Unmarshal([]byte(byteValue), &result)
 			_id := strconv.FormatUint(challenge.RequestID.Uint64(), 10)
 			manualVal = result[_id]["VALUE"]
-		if manualVal == 0{
-			s.log.Error("No Value in database, not submitting.")
-			return
-		}else{
-			fmt.Println("Using Manually entered value: ",manualVal)
-		}
+			if manualVal == 0 {
+				s.log.Error("No Value in database, not submitting.")
+				return
+			} else {
+				fmt.Println("Using Manually entered value: ", manualVal)
+			}
 		}
 	}
 
@@ -100,9 +100,9 @@ func (s *SolutionHandler) Submit(ctx context.Context, result *Result) {
 				s.log.Error("0 value being submitted")
 				value = big.NewInt(0)
 			}
-		} else if manualVal > 0{
+		} else if manualVal > 0 {
 			value = big.NewInt(manualVal)
-			}else{
+		} else {
 			s.log.Error("No Value in database, not submitting.")
 			return
 		}

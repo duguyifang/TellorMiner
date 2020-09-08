@@ -3,11 +3,11 @@ package rpc
 import (
 	"bytes"
 	"context"
-	"math/big"
-	"time"
 	"fmt"
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/tellor-io/TellorMiner/util"
+	"math/big"
+	"time"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/common/math"
@@ -23,7 +23,7 @@ const (
 	currentVarsFN   = "0xa22e407a"
 	disputeStatusFN = "0x733bdef0"
 	getRequestVars  = "0xe1eee6d6"
-	didMineFN		= "0x63bb82ad"
+	didMineFN       = "0x63bb82ad"
 )
 
 var mockClientLog = util.NewLogger("rpc", "mockClient")
@@ -47,7 +47,7 @@ type MockQueryMeta struct {
 //MockOptions are config options for the mock client
 type MockOptions struct {
 	ETHBalance       *big.Int
-	MiningStatus	 bool
+	MiningStatus     bool
 	Nonce            uint64
 	GasPrice         *big.Int
 	TokenBalance     *big.Int
@@ -60,7 +60,7 @@ type MockOptions struct {
 type mockClient struct {
 	balance          *big.Int
 	nonce            uint64
-	miningStatus	  bool
+	miningStatus     bool
 	gasPrice         *big.Int
 	tokenBalance     *big.Int
 	top50Requests    []*big.Int
@@ -81,8 +81,8 @@ func NewMockClientWithValues(opts *MockOptions) ETHClient {
 	if err != nil {
 		panic(err)
 	}
-	fmt.Println("Mining Status",opts.MiningStatus)
-	return &mockClient{balance: opts.ETHBalance, miningStatus:opts.MiningStatus ,nonce: opts.Nonce,
+	fmt.Println("Mining Status", opts.MiningStatus)
+	return &mockClient{balance: opts.ETHBalance, miningStatus: opts.MiningStatus, nonce: opts.Nonce,
 		gasPrice: opts.GasPrice, tokenBalance: opts.TokenBalance,
 		top50Requests: opts.Top50Requests, currentChallenge: opts.CurrentChallenge,
 		disputeStatus: opts.DisputeStatus, mockQueryMeta: opts.QueryMetadata, abiCodec: codec}
@@ -119,7 +119,7 @@ func (c *mockClient) CallContract(ctx context.Context, call ethereum.CallMsg, bl
 		}
 	case didMineFN:
 		{
-		    fmt.Println("getting Mining Status",c.miningStatus)
+			fmt.Println("getting Mining Status", c.miningStatus)
 			return meth.Outputs.Pack(c.miningStatus)
 		}
 	case top50FN:
@@ -350,6 +350,6 @@ func paddedInt(w *bytes.Buffer, val *big.Int) error {
 	return err
 }
 
-func (c *mockClient)HeaderByNumber(ctx context.Context, num *big.Int) (*types.Header, error) {
+func (c *mockClient) HeaderByNumber(ctx context.Context, num *big.Int) (*types.Header, error) {
 	return nil, fmt.Errorf("not implemented")
 }

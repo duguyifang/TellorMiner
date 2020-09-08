@@ -25,17 +25,15 @@ type disputeChecker struct {
 	lastCheckedBlock uint64
 }
 
-
 func (c *disputeChecker) String() string {
 	return "DisputeChecker"
 }
 
-
 type ValueCheckResult struct {
-	High, Low float64
+	High, Low   float64
 	WithinRange bool
-	Datapoints []float64
-	Times []time.Time
+	Datapoints  []float64
+	Times       []time.Time
 }
 
 func CheckValueAtTime(reqId uint64, val *big.Int, at time.Time) *ValueCheckResult {
@@ -46,7 +44,7 @@ func CheckValueAtTime(reqId uint64, val *big.Int, at time.Time) *ValueCheckResul
 	var datapoints []float64
 	var times []time.Time
 	for i := 0; i < 5; i++ {
-		t := at.Add((time.Duration(i)-2)*cfg.DisputeTimeDelta.Duration/5)
+		t := at.Add((time.Duration(i) - 2) * cfg.DisputeTimeDelta.Duration / 5)
 		fval, confidence := PSRValueForTime(int(reqId), t)
 		if confidence > 0.8 {
 			datapoints = append(datapoints, fval)
@@ -61,7 +59,7 @@ func CheckValueAtTime(reqId uint64, val *big.Int, at time.Time) *ValueCheckResul
 	min := math.MaxFloat64
 	max := 0.0
 
-	for _,dp := range datapoints {
+	for _, dp := range datapoints {
 		if dp > max {
 			max = dp
 		}
@@ -72,11 +70,9 @@ func CheckValueAtTime(reqId uint64, val *big.Int, at time.Time) *ValueCheckResul
 	min *= 1 - cfg.DisputeThreshold
 	max *= 1 + cfg.DisputeThreshold
 
-
 	bigF := new(big.Float)
 	bigF.SetInt(val)
 	floatVal, _ := bigF.Float64()
-
 
 	withinRange := (floatVal > min) && (floatVal < max)
 
@@ -92,7 +88,6 @@ func (c *disputeChecker) Exec(ctx context.Context) error {
 
 	client := ctx.Value(tellorCommon.ClientContextKey).(rpc.ETHClient)
 
-
 	header, err := client.HeaderByNumber(ctx, nil)
 	if err != nil {
 		return fmt.Errorf("failed to get latest eth block header: %v", err)
@@ -104,7 +99,7 @@ func (c *disputeChecker) Exec(ctx context.Context) error {
 	toCheck := header.Number.Uint64()
 
 	const blockDelay = 100
-	if toCheck - c.lastCheckedBlock < blockDelay {
+	if toCheck-c.lastCheckedBlock < blockDelay {
 		return nil
 	}
 
@@ -123,16 +118,16 @@ func (c *disputeChecker) Exec(ctx context.Context) error {
 		FromBlock: big.NewInt(int64(c.lastCheckedBlock)),
 		ToBlock:   big.NewInt(int64(checkUntil)),
 		Addresses: []common.Address{contractAddress},
-		Topics: [][]common.Hash{{nonceSubmitID}},
+		Topics:    [][]common.Hash{{nonceSubmitID}},
 	}
 	logs, err := client.FilterLogs(ctx, query)
 	if err != nil {
 		return fmt.Errorf("failed to filter eth logs: %v", err)
 	}
 	blockTimes := make(map[uint64]time.Time)
-	for _,l := range logs {
+	for _, l := range logs {
 		nonceSubmit := contracts1.TellorLibraryNonceSubmitted{}
-		err := bar.UnpackLog(&nonceSubmit,"NonceSubmitted", l)
+		err := bar.UnpackLog(&nonceSubmit, "NonceSubmitted", l)
 		if err != nil {
 			return fmt.Errorf("failed to unpack into object: %v", err)
 		}
@@ -154,7 +149,7 @@ func (c *disputeChecker) Exec(ctx context.Context) error {
 		if !result.WithinRange {
 			s := fmt.Sprintf("suspected incorrect value for requestID %d at %s:\n", reqID, blockTime)
 			s += fmt.Sprintf("nearest values:\n")
-			for i,pt := range result.Datapoints {
+			for i, pt := range result.Datapoints {
 				s += fmt.Sprintf("\t%.0f, ", pt)
 				delta := blockTime.Sub(result.Times[i])
 				if delta > 0 {

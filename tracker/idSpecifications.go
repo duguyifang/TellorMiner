@@ -27,7 +27,7 @@ func GetSpecs(ctx context.Context, requestID uint) (*IDSpecifications, error) {
 	instance, err := tellor.NewTellorMaster(contractAddress, client)
 	if err != nil {
 		fmt.Println("instance Error, IDspecs")
-		return nil,err
+		return nil, err
 	}
 	queryString, _, _, granularity, _, _, err := instance.GetRequestVars(nil, big.NewInt(int64(requestID)))
 	if err != nil {

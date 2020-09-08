@@ -28,5 +28,4 @@ var (
 
 	//Ethereum wallet public address
 	PublicAddress = util.NewKey("common", "PublicAddress")
-
 )

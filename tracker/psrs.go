@@ -1,12 +1,12 @@
 package tracker
 
 import (
-	"math"
 	"fmt"
-	"sort"
-	"time"
 	"github.com/tellor-io/TellorMiner/apiOracle"
 	"github.com/tellor-io/TellorMiner/config"
+	"math"
+	"sort"
+	"time"
 )
 
 var switchTime, _ = time.Parse(time.RFC3339, "2020-06-26T00:00:00+00:00")
@@ -42,7 +42,7 @@ var PSRs = map[int]ValueGenerator{
 	},
 	9: &TimedSwitch{
 		before: &SingleSymbol{symbol: "LINK/BTC", granularity: 1000000, transform: MedianAt},
-		after:  &SingleSymbol{symbol:"ETH/USD", granularity: 1000000, transform: MedianAtEOD},
+		after:  &SingleSymbol{symbol: "ETH/USD", granularity: 1000000, transform: MedianAtEOD},
 		at:     switchTime,
 	},
 	10: &TimedSwitch{
@@ -213,7 +213,7 @@ func VolumeWeightedAPIs(processor IndexProcessor) IndexProcessor {
 	return func(apis []*IndexTracker, at time.Time) (apiOracle.PriceInfo, float64) {
 		var results []apiOracle.PriceInfo
 		totalConfidence := 0.0
-		for _,api := range apis {
+		for _, api := range apis {
 			value, confidence := processor([]*IndexTracker{api}, at)
 			//fmt.Println("vwAPI's : ",value, "  : ", confidence)
 			if confidence > 0 {
@@ -221,7 +221,7 @@ func VolumeWeightedAPIs(processor IndexProcessor) IndexProcessor {
 				totalConfidence += confidence
 			}
 		}
-		return VolumeWeightedAvg(results), totalConfidence/float64(len(results))
+		return VolumeWeightedAvg(results), totalConfidence / float64(len(results))
 	}
 }
 
@@ -247,7 +247,6 @@ func MedianAt(apis []*IndexTracker, at time.Time) (apiOracle.PriceInfo, float64)
 	return Median(values), confidence
 }
 
-
 func ManualEntry(apis []*IndexTracker, at time.Time) (apiOracle.PriceInfo, float64) {
 	vals, confidence := getLatest(apis, at)
 	if confidence == 0 {
@@ -255,15 +254,14 @@ func ManualEntry(apis []*IndexTracker, at time.Time) (apiOracle.PriceInfo, float
 	}
 	for _, val := range vals {
 		// fmt.Println(int64(val.Volume),time.Now().Unix())
-		if int64(val.Volume) < time.Now().Unix(){
-			fmt.Println("Pulled Timestamp: ",val.Volume)
+		if int64(val.Volume) < time.Now().Unix() {
+			fmt.Println("Pulled Timestamp: ", val.Volume)
 			fmt.Println("Warning: Manual Data Entry is expired, please update")
 			return apiOracle.PriceInfo{}, 0
 		}
 	}
 	return Median(vals), confidence
 }
-
 
 func MedianAtEOD(apis []*IndexTracker, at time.Time) (apiOracle.PriceInfo, float64) {
 	now := time.Now().UTC()
@@ -305,7 +303,6 @@ func Mean(vals []apiOracle.PriceInfo) apiOracle.PriceInfo {
 	return result
 }
 
-
 func VolumeWeightedAvg(vals []apiOracle.PriceInfo) apiOracle.PriceInfo {
 	priceSum := 0.0
 	volSum := 0.0
@@ -323,4 +320,3 @@ func VolumeWeightedAvg(vals []apiOracle.PriceInfo) apiOracle.PriceInfo {
 	}
 	return apiOracle.PriceInfo{Price: priceSum / float64(len(vals)), Volume: 0}
 }
-

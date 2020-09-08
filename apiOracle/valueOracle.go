@@ -49,15 +49,15 @@ func SetRequestValue(id string, at time.Time, info PriceInfo) {
 		valueHistory[id] = NewWindow(7 * 24 * time.Hour)
 	}
 	valueHistory[id].Insert(&PriceStamp{
-		Created: at,
-		PriceInfo:info,
+		Created:   at,
+		PriceInfo: info,
 	})
 	valueHistoryMutex.Unlock()
 }
 
 func writeOutHistory() {
 	valueHistoryMutex.Lock()
-	for _,v := range valueHistory {
+	for _, v := range valueHistory {
 		v.Trim()
 	}
 	data, err := json.MarshalIndent(valueHistory, "", "\t")
@@ -134,4 +134,3 @@ func EnsureValueOracle() error {
 	}()
 	return nil
 }
-

@@ -45,7 +45,7 @@ func (c contractWrapper) DidMine(challenge [32]byte) (bool, error) {
 	return c.contract2.DidMine(nil, challenge, c.fromAddress)
 }
 
-func PrepareContractTxn(ctx context.Context,proxy db.DataServerProxy, ctxName string, callback tellorCommon.TransactionGeneratorFN) error {
+func PrepareContractTxn(ctx context.Context, proxy db.DataServerProxy, ctxName string, callback tellorCommon.TransactionGeneratorFN) error {
 
 	cfg := config.GetConfig()
 	client := ctx.Value(tellorCommon.ClientContextKey).(ETHClient)
@@ -85,11 +85,11 @@ func PrepareContractTxn(ctx context.Context,proxy db.DataServerProxy, ctxName st
 			fmt.Println("Could not determine gas price to submit txn", err)
 			return err
 		}
-	} 
+	}
 	mul := cfg.GasMultiplier
 	if mul > 0 {
 		fmt.Println("using gas multiplier : ", mul)
-		gasPrice = gasPrice.Mul(gasPrice,big.NewInt(int64(mul)));
+		gasPrice = gasPrice.Mul(gasPrice, big.NewInt(int64(mul)))
 	}
 	for i < 5 {
 		//
@@ -172,7 +172,7 @@ func PrepareContractTxn(ctx context.Context,proxy db.DataServerProxy, ctxName st
 	return nil
 }
 
-func getInt(data []byte) (*big.Int) {
+func getInt(data []byte) *big.Int {
 	if data == nil || len(data) == 0 {
 		return nil
 	}

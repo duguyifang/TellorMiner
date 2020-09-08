@@ -3,14 +3,14 @@ package tracker
 import (
 	"context"
 	"fmt"
-	"math/big"
-	"os"
-	"path/filepath"
-	"testing"
 	"github.com/ethereum/go-ethereum/common"
 	tellorCommon "github.com/tellor-io/TellorMiner/common"
 	"github.com/tellor-io/TellorMiner/config"
 	tellor "github.com/tellor-io/TellorMiner/contracts"
+	"math/big"
+	"os"
+	"path/filepath"
+	"testing"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/common/math"
@@ -32,7 +32,7 @@ func TestCurrentVariables(t *testing.T) {
 		Difficulty: big.NewInt(500), QueryString: queryStr,
 		Granularity: big.NewInt(1000), Tip: big.NewInt(0)}
 	opts := &rpc.MockOptions{ETHBalance: startBal, Nonce: 1, GasPrice: big.NewInt(700000000),
-		TokenBalance: big.NewInt(0), MiningStatus:true,Top50Requests: []*big.Int{}, CurrentChallenge: chal}
+		TokenBalance: big.NewInt(0), MiningStatus: true, Top50Requests: []*big.Int{}, CurrentChallenge: chal}
 	client := rpc.NewMockClientWithValues(opts)
 
 	DB, err := db.Open(filepath.Join(os.TempDir(), "test_currentVariables"))
@@ -47,14 +47,14 @@ func TestCurrentVariables(t *testing.T) {
 	masterInstance := ctx.Value(tellorCommon.MasterContractContextKey)
 	if masterInstance == nil {
 		contractAddress := common.HexToAddress(cfg.ContractAddress)
-		masterInstance, err = tellor.NewTellorMaster(contractAddress,client)
+		masterInstance, err = tellor.NewTellorMaster(contractAddress, client)
 		if err != nil {
 			runnerLog.Error("Problem creating tellor master instance: %v\n", err)
 			return
 		}
 		ctx = context.WithValue(ctx, tellorCommon.MasterContractContextKey, masterInstance)
 	}
-	
+
 	fmt.Println("Working to Line 41")
 	err = tracker.Exec(ctx)
 	if err != nil {

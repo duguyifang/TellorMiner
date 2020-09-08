@@ -10,7 +10,7 @@ type Ampl struct {
 	granularity float64
 }
 
-func (a Ampl)Require(at time.Time) map[string]IndexProcessor {
+func (a Ampl) Require(at time.Time) map[string]IndexProcessor {
 	return map[string]IndexProcessor{
 		//make sure these are all returning the volume in AMPL
 		"AMPL/USD": VolumeWeightedAPIs(TimeWeightedAvg(24*time.Hour, NoDecay)),
@@ -21,7 +21,7 @@ func (a Ampl)Require(at time.Time) map[string]IndexProcessor {
 
 func (a Ampl) ValueAt(vals map[string]apiOracle.PriceInfo, at time.Time) float64 {
 	valSlice := make([]apiOracle.PriceInfo, 0, len(vals))
-	for _,v := range vals {
+	for _, v := range vals {
 		valSlice = append(valSlice, v)
 	}
 	return VolumeWeightedAvg(valSlice).Price * a.granularity
@@ -37,8 +37,6 @@ func AmpleChained(chainedPair string) IndexProcessor {
 		eod = eod.Truncate(d)
 		eod = eod.Add(2 * time.Hour)
 
-
-
 		//Get the value always at 2am UTC
 		//time weight individual 10 minute buckets
 		//VWAP based on time at 2am
@@ -52,7 +50,7 @@ func AmpleChained(chainedPair string) IndexProcessor {
 		//function to collect API values over an interval
 		apiFn := VolumeWeightedAPIs(TimeWeightedAvg(interval, NoDecay))
 
-		for i:= 0; i < 144; i++ {
+		for i := 0; i < 144; i++ {
 			thisTime := eod.Add(time.Duration(-i) * interval)
 			chainedPrice, confidence := MedianAt(indexes[chainedPair], thisTime)
 			if confidence < 0.01 {

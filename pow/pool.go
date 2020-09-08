@@ -5,8 +5,8 @@ import (
 	"context"
 	"encoding/json"
 	"math"
-	"math/rand"
 	"math/big"
+	"math/rand"
 
 	"fmt"
 	"github.com/tellor-io/TellorMiner/config"
@@ -21,20 +21,20 @@ type StratumPool struct {
 	worker        string
 	group         *MiningGroup
 	stratumClient *StratumClient
-	input 				chan *Work
+	input         chan *Work
 	currChallenge *MiningChallenge
 	currWork      *Work
 	currJobID     string
 }
 
 type MiningNotify struct {
-	JobID  			string
-	Challenge 	string
-	PoolAddress string
-	LowDifficulty *big.Int
-	MedianDifficulty *big.Int
+	JobID             string
+	Challenge         string
+	PoolAddress       string
+	LowDifficulty     *big.Int
+	MedianDifficulty  *big.Int
 	NetworkDifficulty *big.Int
-	CleanJob 		bool
+	CleanJob          bool
 }
 
 type MiningSetDifficulty struct {
@@ -64,7 +64,6 @@ func (n *MiningSetDifficulty) UnmarshalJSON(buf []byte) error {
 	}
 	return nil
 }
-
 
 func CreatePool(cfg *config.Config, group *MiningGroup) *StratumPool {
 	return &StratumPool{
@@ -141,16 +140,16 @@ func (p *StratumPool) GetWork(input chan *Work) *Work {
 						Difficulty: miningNotify.MedianDifficulty,
 						// Difficulty: big.NewInt(10000000),
 						// Difficulty: big.NewInt(6377077812),
-						RequestID:  big.NewInt(1),
+						RequestID: big.NewInt(1),
 					}
 
 					p.currChallenge = newChallenge
 					p.currJobID = miningNotify.JobID
 					job := &Work{
-						Challenge: newChallenge,
+						Challenge:  newChallenge,
 						PublicAddr: miningNotify.PoolAddress + nonce1,
-						Start: uint64(rand.Int63()),
-						N: math.MaxInt64}
+						Start:      uint64(rand.Int63()),
+						N:          math.MaxInt64}
 					p.currWork = job
 					input <- job
 					//p.log.Info("send new work to hash %#v", job)

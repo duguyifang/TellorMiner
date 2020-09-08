@@ -52,13 +52,13 @@ func DoCompleteMiningLoop(t *testing.T, impl Hasher, diff int64) {
 	go group.Mine(input, output)
 
 	testVectors := []int{19, 133, 8, 442, 1231}
-	for _,v := range testVectors {
+	for _, v := range testVectors {
 		challenge := createChallenge(v, diff)
-		input <- &Work{Challenge:challenge, Start:0, PublicAddr:cfg.PublicAddress, N:math.MaxInt64}
+		input <- &Work{Challenge: challenge, Start: 0, PublicAddr: cfg.PublicAddress, N: math.MaxInt64}
 
 		//wait for a solution to be found
 		select {
-		case result := <- output:
+		case result := <-output:
 			if result == nil {
 				t.Fatalf("nil result for challenge %d", v)
 			}
@@ -72,7 +72,7 @@ func DoCompleteMiningLoop(t *testing.T, impl Hasher, diff int64) {
 
 	//wait for it to close
 	select {
-	case result := <- output:
+	case result := <-output:
 		if result != nil {
 			t.Fatalf("expected nil result when closing mining group")
 		}
@@ -116,7 +116,7 @@ func TestMulti(t *testing.T) {
 		fmt.Println(gpus)
 		t.Fatal(err)
 	}
-	for _,gpu := range gpus {
+	for _, gpu := range gpus {
 		impl, err := NewGpuMiner(gpu, cfg.GPUConfig[gpu.Name()])
 		if err != nil {
 			t.Fatal(err)
@@ -131,15 +131,15 @@ func TestMulti(t *testing.T) {
 	go group.Mine(input, output)
 
 	challenge := createChallenge(0, math.MaxInt64)
-	input <- &Work{Challenge:challenge, Start:0, PublicAddr:cfg.PublicAddress, N:math.MaxInt64}
+	input <- &Work{Challenge: challenge, Start: 0, PublicAddr: cfg.PublicAddress, N: math.MaxInt64}
 	time.Sleep(1 * time.Second)
 	input <- nil
 	timeout := 200 * time.Millisecond
 	select {
-		case _ = <-output:
-			group.PrintHashRateSummary()
-		case _ = <-time.After(timeout):
-			t.Fatalf("mining group didn't quit before %s", timeout.String())
+	case _ = <-output:
+		group.PrintHashRateSummary()
+	case _ = <-time.After(timeout):
+		t.Fatalf("mining group didn't quit before %s", timeout.String())
 	}
 }
 
@@ -156,7 +156,7 @@ func TestHashFunction(t *testing.T) {
 	testVectors[1] = "6ad05c010b7ec871d7d72a7e8d12ad69f00f73ada2553ad517185fbfc1e3da82"
 
 	result := new(big.Int)
-	for k,v := range testVectors {
+	for k, v := range testVectors {
 		nonce := fmt.Sprintf("%x", fmt.Sprintf("%d", k))
 		_string := fmt.Sprintf("%x", challenge.Challenge) + "abcd0123" + nonce
 		bytes := decodeHex(_string)
@@ -194,5 +194,3 @@ func TestMain(m *testing.M) {
 	}
 	os.Exit(m.Run())
 }
-
-

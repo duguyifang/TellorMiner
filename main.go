@@ -112,8 +112,7 @@ func AddDBToCtx(remote bool) error {
 var GitTag string
 var GitHash string
 
-const versionMessage =
-	`
+const versionMessage = `
     The official Tellor Miner %s (%s)
     -----------------------------------------
 	Website: https://tellor.io
@@ -121,7 +120,6 @@ const versionMessage =
 `
 
 func App() *cli.Cli {
-
 
 	app := cli.App("TellorMiner", "The tellor.io official miner")
 
@@ -156,7 +154,7 @@ func stakeCmd(cmd *cli.Cmd) {
 	cmd.Command("status", "show current staking status", simpleCmd(ops.ShowStatus))
 }
 
-func simpleCmd(f func (context.Context) error) func(*cli.Cmd) {
+func simpleCmd(f func(context.Context) error) func(*cli.Cmd) {
 	return func(cmd *cli.Cmd) {
 		cmd.Action = func() {
 			ErrorHandler(f(ctx), "")
@@ -164,7 +162,7 @@ func simpleCmd(f func (context.Context) error) func(*cli.Cmd) {
 	}
 }
 
-func moveCmd(f func(common.Address, *big.Int, context.Context) error) func (*cli.Cmd) {
+func moveCmd(f func(common.Address, *big.Int, context.Context) error) func(*cli.Cmd) {
 	return func(cmd *cli.Cmd) {
 		amt := TRBAmount{}
 		addr := ETHAddress{}

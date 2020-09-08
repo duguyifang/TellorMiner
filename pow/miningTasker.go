@@ -2,14 +2,14 @@ package pow
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"math"
 	"math/big"
 	"math/rand"
 	"os"
-	"io/ioutil"
-	"encoding/json"
 	"strconv"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -99,21 +99,21 @@ func (mt *MiningTasker) GetWork(input chan *Work) *Work {
 	}
 	val := m2[valKey]
 	if val == nil || len(val) == 0 {
-			jsonFile, err := os.Open("manualData.json")
-			if err != nil {
-				fmt.Println(err)
-			}
-			defer jsonFile.Close()
-			byteValue, _ := ioutil.ReadAll(jsonFile)
-			var result map[string]map[string]uint
-			json.Unmarshal([]byte(byteValue), &result)
-			_id := strconv.FormatUint(reqID.Uint64(), 10)
-			val := result[_id]["VALUE"]
-		if val == 0{
+		jsonFile, err := os.Open("manualData.json")
+		if err != nil {
+			fmt.Println(err)
+		}
+		defer jsonFile.Close()
+		byteValue, _ := ioutil.ReadAll(jsonFile)
+		var result map[string]map[string]uint
+		json.Unmarshal([]byte(byteValue), &result)
+		_id := strconv.FormatUint(reqID.Uint64(), 10)
+		val := result[_id]["VALUE"]
+		if val == 0 {
 			mt.log.Info("Pricing data not available for request %d", reqID.Uint64())
 			return nil
-		}else{
-			fmt.Println("Using Manually entered value: ",val)
+		} else {
+			fmt.Println("Using Manually entered value: ", val)
 		}
 	}
 

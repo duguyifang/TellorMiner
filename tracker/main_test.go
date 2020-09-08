@@ -27,4 +27,3 @@ func TestMain(m *testing.M) {
 	apiOracle.EnsureValueOracle()
 	os.Exit(m.Run())
 }
-

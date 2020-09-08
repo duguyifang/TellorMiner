@@ -9,8 +9,6 @@ import (
 	"strconv"
 )
 
-
-
 type CpuMiner int64
 
 func NewCpuMiner(id int64) *CpuMiner {
@@ -18,15 +16,15 @@ func NewCpuMiner(id int64) *CpuMiner {
 	return &x
 }
 
-func (c *CpuMiner)StepSize() uint64 {
+func (c *CpuMiner) StepSize() uint64 {
 	return 1
 }
 
-func (c *CpuMiner)Name() string {
+func (c *CpuMiner) Name() string {
 	return fmt.Sprintf("CPU %d", *c)
 }
 
-func (c *CpuMiner)CheckRange(hash *HashSettings,  start uint64, n uint64) (string, uint64, error) {
+func (c *CpuMiner) CheckRange(hash *HashSettings, start uint64, n uint64) (string, uint64, error) {
 	baseLen := len(hash.prefix)
 	hashInput := make([]byte, len(hash.prefix), len(hash.prefix))
 	copy(hashInput, hash.prefix)
@@ -42,7 +40,7 @@ func (c *CpuMiner)CheckRange(hash *HashSettings,  start uint64, n uint64) (strin
 		hashFn(hashInput, numHash)
 		x.Mod(numHash, hash.difficulty)
 		if x.Cmp(compareZero) == 0 {
-			return nn, (i-start)+1, nil
+			return nn, (i - start) + 1, nil
 		}
 	}
 	return "", n, nil
@@ -60,4 +58,3 @@ func hashFn(data []byte, result *big.Int) {
 	n := sha256.Sum256(hash1)
 	result.SetBytes(n[:])
 }
-

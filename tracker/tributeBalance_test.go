@@ -2,14 +2,14 @@ package tracker
 
 import (
 	"context"
-	"math/big"
-	"os"
-	"path/filepath"
-	"testing"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/tellor-io/TellorMiner/common"
 	"github.com/tellor-io/TellorMiner/db"
 	"github.com/tellor-io/TellorMiner/rpc"
+	"math/big"
+	"os"
+	"path/filepath"
+	"testing"
 )
 
 func TestTributeBalance(t *testing.T) {
