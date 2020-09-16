@@ -19,6 +19,21 @@ type Duration struct {
 	time.Duration
 }
 
+type Kafka struct {
+	Brokers          string `json:"brokers"`
+	SolvedShareTopic string `json:"solvedShareTopic"`
+	JobTopic         string `json:"jobTopic"`
+}
+
+type MysqlConnectionInfo struct {
+	Host     string `json:"mysqlHost"`
+	Port     string `json:"mysqlPort"`
+	Username string `json:"mysqlUserName"`
+	Password string `json:"mysqlPassWord"`
+	Dbname   string `json:"mysqlDbName"`
+	Table    string `json:"tableName"`
+}
+
 func (d *Duration) UnmarshalJSON(b []byte) error {
 	var v interface{}
 	if err := json.Unmarshal(b, &v); err != nil {
@@ -42,34 +57,36 @@ func (d *Duration) UnmarshalJSON(b []byte) error {
 
 //Config holds global config info derived from config.json
 type Config struct {
-	ContractAddress              string   `json:"contractAddress"`
-	NodeURL                      string   `json:"nodeURL"`
-	DatabaseURL                  string   `json:"databaseURL"`
-	PublicAddress                string   `json:"publicAddress"`
-	EthClientTimeout             uint     `json:"ethClientTimeout"`
-	TrackerSleepCycle            Duration `json:"trackerCycle"`
-	Trackers                     []string `json:"trackers"`
-	DBFile                       string   `json:"dbFile"`
-	ServerHost                   string   `json:"serverHost"`
-	ServerPort                   uint     `json:"serverPort"`
-	FetchTimeout                 Duration `json:"fetchTimeout"`
-	RequestData                  uint     `json:"requestData"`
-	MinConfidence                float64  `json:"minConfidence"`
-	RequestDataInterval          Duration `json:"requestDataInterval"`
-	RequestTips                  int64    `json:"requestTips"`
-	MiningInterruptCheckInterval Duration `json:"miningInterruptCheckInterval"`
-	GasMultiplier                float32  `json:"gasMultiplier"`
-	GasMax                       uint     `json:"gasMax"`
-	NumProcessors                int      `json:"numProcessors"`
-	Heartbeat                    Duration `json:"heartbeat"`
-	ServerWhitelist              []string `json:"serverWhitelist"`
-	EnablePoolWorker             bool     `json:"enablePoolWorker"`
-	Worker                       string   `json:"worker"`
-	Password                     string   `json:"password"`
-	PoolURL                      string   `json:"poolURL"`
-	IndexFolder                  string   `json:"indexFolder"`
-	DisputeTimeDelta             Duration `json:"disputeTimeDelta"` //ignore data further than this away from the value we are checking
-	DisputeThreshold             float64  `json:"disputeThreshold"` //maximum allowed relative difference between observed and submitted value
+	ContractAddress              string              `json:"contractAddress"`
+	NodeURL                      string              `json:"nodeURL"`
+	DatabaseURL                  string              `json:"databaseURL"`
+	PublicAddress                string              `json:"publicAddress"`
+	EthClientTimeout             uint                `json:"ethClientTimeout"`
+	TrackerSleepCycle            Duration            `json:"trackerCycle"`
+	Trackers                     []string            `json:"trackers"`
+	DBFile                       string              `json:"dbFile"`
+	ServerHost                   string              `json:"serverHost"`
+	ServerPort                   uint                `json:"serverPort"`
+	FetchTimeout                 Duration            `json:"fetchTimeout"`
+	RequestData                  uint                `json:"requestData"`
+	MinConfidence                float64             `json:"minConfidence"`
+	RequestDataInterval          Duration            `json:"requestDataInterval"`
+	RequestTips                  int64               `json:"requestTips"`
+	MiningInterruptCheckInterval Duration            `json:"miningInterruptCheckInterval"`
+	GasMultiplier                float32             `json:"gasMultiplier"`
+	GasMax                       uint                `json:"gasMax"`
+	NumProcessors                int                 `json:"numProcessors"`
+	Heartbeat                    Duration            `json:"heartbeat"`
+	ServerWhitelist              []string            `json:"serverWhitelist"`
+	Kafka                        Kafka               `json:"kafka"`
+	MysqlConnectionInfo          MysqlConnectionInfo `json:"mysqlConnectionInfo"`
+	EnablePoolWorker             bool                `json:"enablePoolWorker"`
+	Worker                       string              `json:"worker"`
+	Password                     string              `json:"password"`
+	PoolURL                      string              `json:"poolURL"`
+	IndexFolder                  string              `json:"indexFolder"`
+	DisputeTimeDelta             Duration            `json:"disputeTimeDelta"` //ignore data further than this away from the value we are checking
+	DisputeThreshold             float64             `json:"disputeThreshold"` //maximum allowed relative difference between observed and submitted value
 
 	//config parameters excluded from the json config file
 	PrivateKey string `json:"privateKey"`

@@ -19,6 +19,7 @@ import (
 
 	tellor1 "github.com/tellor-io/TellorMiner/contracts1"
 	"github.com/tellor-io/TellorMiner/db"
+	"github.com/tellor-io/TellorMiner/util"
 )
 
 var (
@@ -159,6 +160,9 @@ func PrepareContractTxn(ctx context.Context, proxy db.DataServerProxy, ctxName s
 		} else {
 			if tx != nil {
 				fmt.Printf("%s tx sent: %s\n", ctxName, tx.Hash().Hex())
+				fmt.Printf("update mysql ->\n")
+				messagehandle := util.GetInstance()
+				messagehandle.UpdateTx <- tx.Hash().Hex()
 			}
 
 			return nil

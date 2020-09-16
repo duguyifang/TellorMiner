@@ -4,8 +4,11 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"sync"
 	"time"
 
+	"github.com/segmentio/kafka-go"
+	"github.com/segmentio/kafka-go/snappy"
 	tellorCommon "github.com/tellor-io/TellorMiner/common"
 	"github.com/tellor-io/TellorMiner/config"
 	"github.com/tellor-io/TellorMiner/db"
@@ -23,52 +26,62 @@ type SolutionSink interface {
 
 //MiningMgr holds items for mining and requesting data
 type MiningMgr struct {
-	//primary exit channel
-	exitCh  chan os.Signal
-	log     *util.Logger
-	Running bool
-
-	group      *pow.MiningGroup
-	tasker     WorkSource
-	solHandler SolutionSink
-
-	dataRequester *DataRequester
-	//data requester's exit channel
-	requesterExit chan os.Signal
+	exitCh             chan os.Signal
+	log                *util.Logger
+	Running            bool
+	group              *pow.MiningGroup
+	tasker             WorkSource
+	solHandler         SolutionSink
+	dataRequester      *DataRequester
+	requesterExit      chan os.Signal
+	mutex              sync.Mutex
+	ethurl             string
+	controllerProducer *kafka.Writer
+	processorConsumer  *kafka.Reader
+	mysqlHandle        *util.MysqlConnection
+	workmap            map[uint64]MiningJob
 }
 
 //CreateMiningManager creates a new manager that mananges mining and data requests
 func CreateMiningManager(ctx context.Context, exitCh chan os.Signal, submitter tellorCommon.TransactionSubmitter) (*MiningMgr, error) {
 	cfg := config.GetConfig()
 
-	group, err := pow.SetupMiningGroup(cfg)
-	if err != nil {
-		return nil, fmt.Errorf("failed to setup miners: %s", err.Error())
-	}
+	// group, err := pow.SetupMiningGroup(cfg)
+	// if err != nil {
+	// 	return nil, fmt.Errorf("failed to setup miners: %s", err.Error())
+	// }
 
 	mng := &MiningMgr{
 		exitCh:     exitCh,
 		log:        util.NewLogger("ops", "MiningMgr"),
 		Running:    false,
-		group:      group,
 		tasker:     nil,
 		solHandler: nil,
+		ethurl:     cfg.NodeURL,
 	}
 
-	if cfg.EnablePoolWorker {
-		pool := pow.CreatePool(cfg, group)
-		mng.tasker = pool
-		mng.solHandler = pool
-	} else {
-		proxy := ctx.Value(tellorCommon.DataProxyKey).(db.DataServerProxy)
-		mng.tasker = pow.CreateTasker(cfg, proxy)
-		mng.solHandler = pow.CreateSolutionHandler(cfg, submitter, proxy)
-		if cfg.RequestData > 0 {
-			fmt.Println("dataRequester created")
-			fmt.Println("Request Interval: ", cfg.RequestDataInterval.Duration)
-			mng.dataRequester = CreateDataRequester(exitCh, submitter, cfg.RequestDataInterval.Duration, proxy)
-		}
-	}
+	proxy := ctx.Value(tellorCommon.DataProxyKey).(db.DataServerProxy)
+	mng.tasker = pow.CreateTasker(cfg, proxy)
+	mng.solHandler = pow.CreateSolutionHandler(cfg, submitter, proxy)
+
+	mng.processorConsumer = kafka.NewReader(kafka.ReaderConfig{
+		Brokers:   []string{cfg.Kafka.Brokers},
+		Topic:     cfg.Kafka.SolvedShareTopic,
+		Partition: 0,
+		MinBytes:  128,  // 128B
+		MaxBytes:  10e6, // 10MB
+	})
+
+	mng.controllerProducer = kafka.NewWriter(kafka.WriterConfig{
+		Brokers:          []string{cfg.Kafka.Brokers},
+		Topic:            cfg.Kafka.JobTopic,
+		Balancer:         &kafka.LeastBytes{},
+		CompressionCodec: snappy.NewCompressionCodec(),
+	})
+
+	mng.mysqlHandle = util.CreateMysqlConn(cfg)
+
+	mng.workmap = make(map[uint64]MiningJob)
 	return mng, nil
 }
 
@@ -88,30 +101,41 @@ func (mgr *MiningMgr) Start(ctx context.Context) {
 			mgr.dataRequester.Start(ctx)
 		}
 
-		//start the mining group
-		go mgr.group.Mine(input, output)
+		go mgr.ConsumeSolvedShare(output)
+		go mgr.ConsumeMysqlMessage()
 
-		// sends work to the mining group
 		sendWork := func() {
-			if cfg.EnablePoolWorker {
-				mgr.tasker.GetWork(input)
-			} else {
-				work := mgr.tasker.GetWork(input)
-				if work != nil {
-					input <- work
+			work := mgr.tasker.GetWork(input)
+			if work != nil {
+				height := time.Now().Unix()
+				mgr.SendJobToKafka(work, uint64(height))
+
+				mgr.mutex.Lock()
+				for k, _ := range mgr.workmap {
+					mgr.log.Info(" delete old job request id : %d", k)
+					delete(mgr.workmap, k)
 				}
+				reward := mgr.GetCurrentRewards()
+				miningjob := MiningJob{
+					reward,
+					work,
+				}
+				mgr.workmap[uint64(height)] = miningjob
+				mgr.mutex.Unlock()
+			} else {
+				mgr.log.Info("====> current work is nill discard it")
 			}
 		}
 		//send the initial challenge
 		sendWork()
+		updateChan := util.GetInstance()
+		updateChan.IsReady = true
+
 		for {
 			select {
-			//boss wants us to quit for the day
 			case <-mgr.exitCh:
-				//exit
 				input <- nil
 
-			//found a solution
 			case result := <-output:
 				if result == nil {
 					mgr.Running = false
@@ -120,9 +144,14 @@ func (mgr *MiningMgr) Start(ctx context.Context) {
 				mgr.solHandler.Submit(ctx, result)
 				sendWork()
 
-			//time to check for a new challenge
 			case _ = <-ticker.C:
+				mgr.log.Info("it's time to get work")
 				sendWork()
+			case _ = <-updateChan.UpdateChallenge:
+				mgr.log.Info("==> challenge  have updated so get work now")
+				sendWork()
+			case tx := <-updateChan.UpdateTx:
+				mgr.mysqlHandle.UpdateTx <- tx
 			}
 		}
 	}(ctx)

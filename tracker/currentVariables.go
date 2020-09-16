@@ -3,6 +3,8 @@ package tracker
 import (
 	"context"
 	"fmt"
+	"strings"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	tellorCommon "github.com/tellor-io/TellorMiner/common"
@@ -16,6 +18,7 @@ var currentVarsLog = util.NewLogger("tracker", "CurrentVarsTracker")
 
 //CurrentVariablesTracker concrete tracker type
 type CurrentVariablesTracker struct {
+	OldChallenge string
 }
 
 func (b *CurrentVariablesTracker) String() string {
@@ -83,6 +86,15 @@ func (b *CurrentVariablesTracker) Exec(ctx context.Context) error {
 	if err != nil {
 		fmt.Println("Current Variables Put Error")
 		return err
+	}
+
+	_currentChallenge := fmt.Sprintf("%x", currentChallenge)
+	updateChan := util.GetInstance()
+	if strings.Compare(b.OldChallenge, _currentChallenge) != 0 && updateChan.IsReady {
+		fmt.Println("send update message---->")
+		updateChan.UpdateChallenge <- "update"
+		b.OldChallenge = _currentChallenge
+		fmt.Println("<-----send update message finish")
 	}
 
 	return DB.Put(db.MiningStatusKey, bitSetVar)
